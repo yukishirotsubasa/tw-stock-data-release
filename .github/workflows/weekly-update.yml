@@ -1,0 +1,65 @@
+﻿name: Weekly TWSE Data Update
+
+on:
+  schedule:
+    - cron: '0 2 * * 6'
+  workflow_dispatch:
+    inputs:
+      ref_date:
+        description: 'Reference date (YYYYMMDD). Optional; defaults to today.'
+        required: false
+        type: string
+
+permissions:
+  contents: write
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Run weekly update
+        id: weekly
+        run: |
+          if [ -n "${{ github.event.inputs.ref_date }}" ]; then
+            python -m scripts.weekly "${{ github.event.inputs.ref_date }}"
+          else
+            python -m scripts.weekly
+          fi
+
+      - name: Create or Update GitHub Release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          TAG="${{ steps.weekly.outputs.tag }}"
+          ZIP="${{ steps.weekly.outputs.zip_path }}"
+          PACKAGE_TAG="${{ steps.weekly.outputs.package_tag }}"
+          PERIOD_START="${{ steps.weekly.outputs.period_start }}"
+          PERIOD_END="${{ steps.weekly.outputs.period_end }}"
+          NOTES="TWSE 每日收盤行情 (股票+ETF OHLCV)
+          
+          - Dataset tag: daily-close-csv
+          - Package tag: ${PACKAGE_TAG}
+          - 資料期間: ${PERIOD_START} ~ ${PERIOD_END}
+          - 格式: CSV (UTF-8, 含 header)
+          - 欄位: date, code, name, volume, open, high, low, close"
+
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            gh release edit "$TAG" \
+              --title "Daily Close CSV: $PACKAGE_TAG" \
+              --notes "$NOTES" \
+              --latest
+            gh release upload "$TAG" "$ZIP" --clobber
+          else
+            gh release create "$TAG" "$ZIP" \
+              --title "Daily Close CSV: $PACKAGE_TAG" \
+              --notes "$NOTES" \
+              --latest
+          fi

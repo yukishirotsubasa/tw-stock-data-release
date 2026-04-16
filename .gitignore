@@ -1,0 +1,21 @@
+# 暫存資料
+data/
+output/
+output_test/
+releases/
+releases_test/
+logs/
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.venv/
+
+# 範例/分析檔案
+*.txt
+analyze_*.py
+
+# OS
+.DS_Store
+Thumbs.db
