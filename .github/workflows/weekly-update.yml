@@ -46,8 +46,8 @@ jobs:
           NOTES="TWSE 每日收盤行情 (股票+ETF OHLCV)
           
           - Dataset tag: daily-close-csv
-          - Package tag: ${PACKAGE_TAG}
-          - 資料期間: ${PERIOD_START} ~ ${PERIOD_END}
+          - 資料覆蓋範圍: 20040211 ~ ${PERIOD_END}
+          - 本次更新區間: ${PERIOD_START} ~ ${PERIOD_END}
           - 格式: CSV (UTF-8, 含 header)
           - 欄位: date, code, name, volume, open, high, low, close"
 
