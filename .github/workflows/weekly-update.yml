@@ -2,7 +2,7 @@
 
 on:
   schedule:
-    - cron: '0 2 * * 6'
+    - cron: '0 22 * * 5'
   workflow_dispatch:
     inputs:
       ref_date:
@@ -27,6 +27,7 @@ jobs:
 
       - name: Run weekly update
         id: weekly
+        continue-on-error: true
         run: |
           if [ -n "${{ github.event.inputs.ref_date }}" ]; then
             python -m scripts.weekly "${{ github.event.inputs.ref_date }}"
@@ -35,6 +36,7 @@ jobs:
           fi
 
       - name: Create or Update GitHub Release
+        if: ${{ steps.weekly.outputs.has_success == 'true' }}
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
@@ -63,3 +65,45 @@ jobs:
               --notes "$NOTES" \
               --latest
           fi
+
+      - name: Send LINE notification for failures
+        if: ${{ always() && steps.weekly.outputs.has_failures == 'true' }}
+        env:
+          LINE_CHANNEL_ACCESS_TOKEN: ${{ secrets.LINE_CHANNEL_ACCESS_TOKEN }}
+          LINE_TO: ${{ secrets.LINE_TO }}
+          FAILURE_REPORT_PATH: ${{ steps.weekly.outputs.failure_report_path }}
+        run: |
+          python - <<'PY'
+          import json
+          import os
+          from pathlib import Path
+
+          report_path = Path(os.environ["FAILURE_REPORT_PATH"])
+          text = report_path.read_text(encoding="utf-8").strip()
+
+          payload = {
+              "to": os.environ["LINE_TO"],
+              "messages": [
+                  {
+                      "type": "text",
+                      "text": text,
+                  }
+              ],
+          }
+
+          Path("line_payload.json").write_text(
+              json.dumps(payload, ensure_ascii=False),
+              encoding="utf-8",
+          )
+          PY
+
+          curl -sS -X POST "https://api.line.me/v2/bot/message/push" \
+            -H "Content-Type: application/json" \
+            -H "Authorization: Bearer ${LINE_CHANNEL_ACCESS_TOKEN}" \
+            --data-binary @line_payload.json
+
+      - name: Mark workflow failed when all dates failed
+        if: ${{ always() && steps.weekly.outcome == 'failure' }}
+        run: |
+          echo "weekly.py 無有效資料，保留 workflow 失敗狀態。"
+          exit 1

@@ -25,13 +25,20 @@ HEADERS = {
 }
 
 
-def download_day(date_str: str, save_dir: str | Path = config.DATA_DIR) -> Path | None:
+def download_day(
+    date_str: str,
+    save_dir: str | Path = config.DATA_DIR,
+    max_retries: int = config.MAX_RETRIES,
+    force_redownload: bool = False,
+) -> Path | None:
     """
     下載指定日期的 MI_INDEX JSON 並儲存至本地檔案。
 
     Args:
         date_str: 日期字串 YYYYMMDD
         save_dir: 儲存目錄
+        max_retries: 下載重試次數（至少 1）
+        force_redownload: True 時忽略本地既有檔案並強制重抓
 
     Returns:
         儲存的檔案路徑，失敗時回傳 None
@@ -41,13 +48,14 @@ def download_day(date_str: str, save_dir: str | Path = config.DATA_DIR) -> Path 
     filepath = save_dir / f"{date_str}.json"
 
     # 已存在就跳過 (idempotent)
-    if filepath.exists():
+    if filepath.exists() and not force_redownload:
         logger.info(f"[SKIP] {date_str} 已存在")
         return filepath
 
     url = config.TWSE_MI_INDEX_URL.format(date=date_str)
+    retry_count = max(1, int(max_retries))
 
-    for attempt in range(1, config.MAX_RETRIES + 1):
+    for attempt in range(1, retry_count + 1):
         try:
             req = urllib.request.Request(url, headers=HEADERS)
             with urllib.request.urlopen(req, timeout=30) as resp:
@@ -64,7 +72,7 @@ def download_day(date_str: str, save_dir: str | Path = config.DATA_DIR) -> Path 
             if e.code == 429 or e.code >= 500:
                 wait = config.BACKOFF_BASE_SEC * (2 ** (attempt - 1))
                 logger.warning(
-                    f"[RETRY {attempt}/{config.MAX_RETRIES}] {date_str} "
+                    f"[RETRY {attempt}/{retry_count}] {date_str} "
                     f"HTTP {e.code}, 等待 {wait}s"
                 )
                 time.sleep(wait)
@@ -75,12 +83,12 @@ def download_day(date_str: str, save_dir: str | Path = config.DATA_DIR) -> Path 
         except (urllib.error.URLError, TimeoutError) as e:
             wait = config.BACKOFF_BASE_SEC * (2 ** (attempt - 1))
             logger.warning(
-                f"[RETRY {attempt}/{config.MAX_RETRIES}] {date_str} "
+                f"[RETRY {attempt}/{retry_count}] {date_str} "
                 f"連線錯誤: {e}, 等待 {wait}s"
             )
             time.sleep(wait)
 
-    logger.error(f"[FAIL] {date_str} 重試 {config.MAX_RETRIES} 次後放棄")
+    logger.error(f"[FAIL] {date_str} 重試 {retry_count} 次後放棄")
     return None
 
 
