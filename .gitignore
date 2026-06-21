@@ -1,9 +1,14 @@
 # 暫存資料
 data/
 output/
+output_tpex/
 output_test/
+output_tpex_test/
 releases/
+releases_tpex/
 releases_test/
+releases_tpex_test
+releases_tpex_test_year
 logs/
 
 # Python
@@ -15,6 +20,8 @@ __pycache__/
 # 範例/分析檔案
 *.txt
 analyze_*.py
+twse sample/
+tpxe sample/
 
 # OS
 .DS_Store

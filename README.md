@@ -32,6 +32,8 @@ date,code,name,volume,open,high,low,close
 
 ## 本地回填與打包
 
+### TWSE
+
 ```bash
 # 預設: 20040211 ~ 20260404
 python -m scripts.backfill
@@ -49,6 +51,76 @@ python -m scripts.backfill --merge-period week
 python -m scripts.backfill --merge-period year
 ```
 
+TWSE 本地流程只讀取 `--source-dir` 內既有的 `YYYYMMDD.txt` 或 `YYYYMMDD.json` 原始檔，不會下載資料。
+
+主要參數:
+
+- `--start`: 起始日期，格式 `YYYYMMDD`
+- `--end`: 結束日期，格式 `YYYYMMDD`
+- `--source-dir`: 原始檔目錄，預設 `.`
+- `--output-dir`: 每日 CSV 輸出目錄，預設 `output`
+- `--zip-dir`: zip 輸出目錄，預設 `releases`
+- `--merge-period`: 合併週期，可用 `week` 或 `year`
+- `--validation-log`: 驗證失敗紀錄，預設 `logs/validation_failures.log`
+- `--merge-only`: 只合併既有每日 CSV
+
+產生檔案:
+
+- 每日 CSV: `{output-dir}/YYYYMMDD.csv`
+- 週包: `{zip-dir}/weekly_YYYY_Www.zip`
+- 年包: `{zip-dir}/yearly_YYYY.zip`
+- 驗證失敗紀錄: `{validation-log}`
+
+### TPEX
+
+TPEX 本地流程只讀取 `--source-dir` 內既有的 `YYYYMMDD.txt` / `YYYYMMDD.csv` / `YYYYMMDD.html` / `YYYYMMDD.htm` 原始檔，不會下載資料。
+
+支援格式:
+
+- 2007 年 7 月前的 HTML table
+- 2007 年 7 月起的 CSV 文字內容
+- CSV 無資料日 (`共0筆`) 會略過，不視為驗證失敗
+
+```bash
+# 使用預設輸出路徑 output_tpex / releases_tpex
+python -m scripts.tpex_backfill --source-dir "D:\Tpex Data\DailyClose" --start 20070102 --end 20111231
+
+# 指定正式輸出路徑
+python -m scripts.tpex_backfill --source-dir tpex_raw --output-dir output_tpex --zip-dir releases_tpex
+
+# 只做合併打包 (使用既有 TPEX 每日 CSV)
+python -m scripts.tpex_backfill --merge-only --output-dir output_tpex --zip-dir releases_tpex
+
+# 以週為單位打包 (weekly_YYYY_Www)
+python -m scripts.tpex_backfill --merge-period week
+
+# 以年為單位打包 (yearly_YYYY)
+python -m scripts.tpex_backfill --merge-period year
+
+# 範例
+python -m scripts.tpex_backfill --source-dir "D:\Tpex Data\DailyClose" --start 20070102 --end 20251231 --merge-period year
+python -m scripts.tpex_backfill --source-dir "D:\Tpex Data\DailyClose" --start 20260102 --end 20260621 --merge-period week
+
+```
+
+主要參數:
+
+- `--start`: 起始日期，格式 `YYYYMMDD`，預設 `20070102`
+- `--end`: 結束日期，格式 `YYYYMMDD`，預設 `20260404`
+- `--source-dir`: 原始檔目錄，預設 `.`
+- `--output-dir`: 每日 CSV 輸出目錄，預設 `output_tpex`
+- `--zip-dir`: zip 輸出目錄，預設 `releases_tpex`
+- `--merge-period`: 合併週期，可用 `week` 或 `year`
+- `--validation-log`: 驗證失敗紀錄，預設 `logs/tpex_validation_failures.log`
+- `--merge-only`: 只合併既有每日 CSV
+
+產生檔案:
+
+- 每日 CSV: `{output-dir}/YYYYMMDD.csv`
+- 週包: `{zip-dir}/weekly_YYYY_Www.zip`
+- 年包: `{zip-dir}/yearly_YYYY.zip`
+- 驗證失敗紀錄: `{validation-log}`
+
 ## 專案結構
 
 ```text
@@ -62,5 +134,6 @@ scripts/
   merger.py              # 合併與壓縮
   weekly.py              # 每週流程 (GitHub Actions)
   backfill.py            # 歷史回填與批次打包
+  tpex_backfill.py       # TPEX 本地回填與批次打包
 README.md
 ```
