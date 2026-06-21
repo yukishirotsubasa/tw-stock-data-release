@@ -8,7 +8,7 @@ import sys
 import os
 import logging
 import time
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 # 允許從專案根目錄執行
@@ -26,6 +26,7 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 DATASET_TAG = "daily-close-csv"
+TAIPEI_TZ = timezone(timedelta(hours=8), "Asia/Taipei")
 MAX_ATTEMPTS_PER_DATE = 3
 
 
@@ -43,7 +44,9 @@ def write_github_output(outputs: dict[str, str]) -> None:
 def get_last_week_dates(ref_date: datetime | None = None) -> list[str]:
     """取得本週一～週五的日期字串列表"""
     if ref_date is None:
-        ref_date = datetime.now()
+        ref_date = datetime.now(TAIPEI_TZ)
+    elif ref_date.tzinfo is not None:
+        ref_date = ref_date.astimezone(TAIPEI_TZ)
 
     # 找到本次要處理的週一起點
     days_since_monday = ref_date.weekday()  # 0=Mon
