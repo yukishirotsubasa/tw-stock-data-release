@@ -1,14 +1,9 @@
 # 暫存資料
 data/
-output/
-output_tpex/
-output_test/
-output_tpex_test/
-releases/
-releases_tpex/
-releases_test/
-releases_tpex_test
-releases_tpex_test_year
+/output/
+/output_*/
+/releases/
+/releases_*/
 logs/
 
 # Python

@@ -61,9 +61,10 @@ def extract_day(filepath: str | Path, date_str: str) -> list[dict]:
     rows = []
     for row in data:
         code = row[field_indices["code"]].strip()
+        name = row[field_indices["name"]].strip()
 
-        # 過濾: 只保留一般股票 + ETF
-        if not config.CODE_PATTERN.match(code):
+        # 過濾: 使用股票代號格式與名稱尾碼排除權證/DR/特別股等商品
+        if not config.is_included_security(code, name):
             continue
 
         record = {"date": date_str}

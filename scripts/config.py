@@ -30,9 +30,23 @@ FIELD_MAP = {
 # CSV 輸出欄位順序
 CSV_COLUMNS = ["date", "code", "name", "volume", "open", "high", "low", "close"]
 
-# 過濾規則: 一般股票 (4碼數字) + ETF (00開頭 4~6碼)
 import re
-CODE_PATTERN = re.compile(r"^\d{4}$|^00\d{2,4}$")
+
+# 過濾規則: 一般股票 (1~9 開頭 4 碼) + 00 開頭商品 (總長度 4~6 碼)
+COMMON_STOCK_CODE_PATTERN = re.compile(r"^[1-9][0-9]{3}$")
+ETF_CODE_PATTERN = re.compile(r"^00[0-9A-Z]{2,4}$")
+CODE_PATTERN = re.compile(r"^(?:[1-9][0-9]{3}|00[0-9A-Z]{2,4})$")
+EXCLUDED_NAME_SUFFIX_PATTERN = re.compile(r"(?:N|DR|R1|R2|特|售[0-9]{2}|購[0-9]{2})$")
+
+
+def is_included_security(code: str, name: str) -> bool:
+    code_value = code.strip().upper()
+    name_value = name.strip()
+
+    if not CODE_PATTERN.fullmatch(code_value):
+        return False
+
+    return EXCLUDED_NAME_SUFFIX_PATTERN.search(name_value) is None
 
 # 目錄
 DATA_DIR = "data"

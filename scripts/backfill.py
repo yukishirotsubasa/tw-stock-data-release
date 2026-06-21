@@ -4,7 +4,7 @@
 流程:
 1. 依日期區間尋找原始檔 (`YYYYMMDD.txt` 或 `YYYYMMDD.json`)
 2. 驗證後轉成每日 CSV 到 output 目錄
-3. 依 `--merge-period` 合併並打包 zip 到 zip 目錄
+3. 依 `--merge-period` 合併並打包 zip，或使用 `--extract-only` 只輸出每日 CSV
 
 輸出命名:
 - 每日 CSV: {output-dir}/YYYYMMDD.csv
@@ -179,12 +179,16 @@ def main() -> None:
     parser.add_argument("--start", default=DEFAULT_START, help="起始日期 YYYYMMDD")
     parser.add_argument("--end", default=DEFAULT_END, help="結束日期 YYYYMMDD")
     parser.add_argument("--merge-only", action="store_true", help="只做合併打包，不做抽取")
+    parser.add_argument("--extract-only", action="store_true", help="只將 raw data 轉成每日 CSV，不做合併打包")
     parser.add_argument("--source-dir", default=".", help="來源檔目錄 (YYYYMMDD.txt/json)")
     parser.add_argument("--output-dir", default=config.OUTPUT_DIR, help="CSV 輸出目錄")
     parser.add_argument("--zip-dir", default="releases", help="Zip 輸出目錄")
     parser.add_argument("--merge-period", choices=["week", "year"], default="week", help="合併週期")
     parser.add_argument("--validation-log", default="logs/validation_failures.log", help="驗證失敗紀錄")
     args = parser.parse_args()
+
+    if args.merge_only and args.extract_only:
+        parser.error("--merge-only 與 --extract-only 不可同時使用")
 
     source_dir = Path(args.source_dir)
     output_dir = Path(args.output_dir)
@@ -205,6 +209,10 @@ def main() -> None:
 
     success = run_read_and_extract(dates, source_dir, output_dir, validation_log, total)
     logger.info(f"抽取完成: {len(success)}/{total} 成功")
+
+    if args.extract_only:
+        logger.info("extract-only: 略過合併打包")
+        return
 
     logger.info("=== Merge ===")
     run_merge(output_dir, zip_dir, args.merge_period, args.start, args.end)

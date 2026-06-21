@@ -19,6 +19,7 @@ Arguments:
 - `--output-dir`: daily CSV output directory. Default: `output_tpex`
 - `--zip-dir`: merged zip output directory. Default: `releases_tpex`
 - `--merge-period`: packaging period, `week` or `year`. Default: `week`
+- `--extract-only`: output daily CSV files only, no merge or zip.
 - `--validation-log`: invalid source log path. Default: `logs/tpex_validation_failures.log`
 - `--merge-only`: skip source parsing and only merge existing daily CSV files.
 
@@ -61,7 +62,6 @@ DEFAULT_VALIDATION_LOG = "logs/tpex_validation_failures.log"
 
 DATE_HTML_RE = re.compile(r"(\d{2,3})年(\d{1,2})月(\d{1,2})日")
 DATE_CSV_RE = re.compile(r"資料日期\s*:\s*(\d{2,3})/(\d{1,2})/(\d{1,2})")
-TPEX_CODE_RE = re.compile(r"^\d+[A-Z]*$")
 NUMBER_RE = re.compile(r"-?\d+(?:\.\d+)?")
 
 FIELD_ALIASES = {
@@ -152,8 +152,8 @@ def clean_number(value: str) -> str:
     return match.group(0) if match else ""
 
 
-def is_tpex_code(value: str) -> bool:
-    return bool(TPEX_CODE_RE.fullmatch(normalize_cell(value)))
+def is_tpex_security(code: str, name: str) -> bool:
+    return config.is_included_security(normalize_cell(code), normalize_cell(name))
 
 
 def make_record(date_str: str, values: dict[str, str]) -> dict[str, str]:
@@ -175,7 +175,7 @@ def parse_html_rows(text: str, date_str: str) -> list[dict[str, str]]:
 
     records: list[dict[str, str]] = []
     for row in parser.rows:
-        if len(row) < 8 or not is_tpex_code(row[0]):
+        if len(row) < 8 or not is_tpex_security(row[0], row[1]):
             continue
 
         record = make_record(
@@ -226,7 +226,8 @@ def parse_csv_rows(text: str, date_str: str) -> list[dict[str, str]]:
             continue
 
         code = row[indices["code"]]
-        if not is_tpex_code(code):
+        name = row[indices["name"]]
+        if not is_tpex_security(code, name):
             continue
 
         record = make_record(
@@ -397,9 +398,13 @@ def main() -> None:
     parser.add_argument("--output-dir", default=DEFAULT_OUTPUT_DIR, help="Daily CSV output directory")
     parser.add_argument("--zip-dir", default=DEFAULT_ZIP_DIR, help="Merged zip output directory")
     parser.add_argument("--merge-period", choices=["week", "year"], default="week", help="Merge period")
+    parser.add_argument("--extract-only", action="store_true", help="Only convert raw data to daily CSV files")
     parser.add_argument("--validation-log", default=DEFAULT_VALIDATION_LOG, help="Validation failure log")
     parser.add_argument("--merge-only", action="store_true", help="Only merge existing daily CSV files")
     args = parser.parse_args()
+
+    if args.merge_only and args.extract_only:
+        parser.error("--merge-only and --extract-only cannot be used together")
 
     source_dir = Path(args.source_dir)
     output_dir = Path(args.output_dir)
@@ -419,6 +424,10 @@ def main() -> None:
         total,
     )
     logger.info(f"Extracted {len(success)}/{total} dates")
+    if args.extract_only:
+        logger.info("extract-only: skip merge/zip")
+        return
+
     run_merge(output_dir, zip_dir, args.merge_period, args.start, args.end)
 
 

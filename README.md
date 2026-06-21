@@ -5,7 +5,7 @@
 ## 資料內容
 
 - 資料源: TWSE MI_INDEX (每日收盤行情)
-- 範圍: 上市股票 + ETF
+- 範圍: 依股票代號與名稱篩選出的 TWSE/TPEX 標的
 - 欄位: `date`, `code`, `name`, `volume`, `open`, `high`, `low`, `close`
 - 格式: CSV (UTF-8, 含 header)，壓縮為 zip
 - 更新: 每週六自動發布至 [Releases](../../releases)
@@ -22,11 +22,19 @@
 
 從 [Releases](../../releases) 頁面下載最新 zip，解壓後即為 CSV。
 
+## 股票篩選規則
+
+TWSE 與 TPEX 使用相同篩選規則:
+
+- `code` 符合 `^[1-9][0-9]{3}$`
+- `code` 符合 `^00[0-9A-Z]{2,4}$`
+- `name` 不可符合字尾 `N`, `DR`, `R1`, `R2`, `特`, `售[0-9]{2}`, `購[0-9]{2}`
+
 ### CSV 範例
 
 ```csv
 date,code,name,volume,open,high,low,close
-20251124,0050,元大台灣50,162722018,60.10,60.30,59.65,59.70
+20251124,006208,富邦台50,162722018,60.10,60.30,59.65,59.70
 20251124,2330,台積電,88861648,1400.00,1405.00,1375.00,1375.00
 ```
 
@@ -41,7 +49,10 @@ python -m scripts.backfill
 # 指定日期區間
 python -m scripts.backfill --start 20240101 --end 20241231
 
-# 只做合併打包 (使用既有 CSV)
+# 只將 raw data 轉成每日 CSV，不合併、不產生 zip
+python -m scripts.backfill --extract-only
+
+# 只做合併打包，不讀取 raw data (使用既有每日 CSV)
 python -m scripts.backfill --merge-only
 
 # 以週為單位打包 (weekly_YYYY_Www)
@@ -49,6 +60,9 @@ python -m scripts.backfill --merge-period week
 
 # 以年為單位打包 (yearly_YYYY)
 python -m scripts.backfill --merge-period year
+
+# 範例
+python -m scripts.backfill --source-dir "D:\Twse Data\DailyClose" --start 20040211 --end 20251231 --extract-only
 ```
 
 TWSE 本地流程只讀取 `--source-dir` 內既有的 `YYYYMMDD.txt` 或 `YYYYMMDD.json` 原始檔，不會下載資料。
@@ -61,6 +75,7 @@ TWSE 本地流程只讀取 `--source-dir` 內既有的 `YYYYMMDD.txt` 或 `YYYYM
 - `--output-dir`: 每日 CSV 輸出目錄，預設 `output`
 - `--zip-dir`: zip 輸出目錄，預設 `releases`
 - `--merge-period`: 合併週期，可用 `week` 或 `year`
+- `--extract-only`: 只將 raw data 轉成每日 CSV，不做合併打包
 - `--validation-log`: 驗證失敗紀錄，預設 `logs/validation_failures.log`
 - `--merge-only`: 只合併既有每日 CSV
 
@@ -88,7 +103,10 @@ python -m scripts.tpex_backfill --source-dir "D:\Tpex Data\DailyClose" --start 2
 # 指定正式輸出路徑
 python -m scripts.tpex_backfill --source-dir tpex_raw --output-dir output_tpex --zip-dir releases_tpex
 
-# 只做合併打包 (使用既有 TPEX 每日 CSV)
+# 只將 raw data 轉成每日 CSV，不合併、不產生 zip
+python -m scripts.tpex_backfill --extract-only
+
+# 只做合併打包，不讀取 raw data (使用既有每日 CSV)
 python -m scripts.tpex_backfill --merge-only --output-dir output_tpex --zip-dir releases_tpex
 
 # 以週為單位打包 (weekly_YYYY_Www)
@@ -98,8 +116,8 @@ python -m scripts.tpex_backfill --merge-period week
 python -m scripts.tpex_backfill --merge-period year
 
 # 範例
-python -m scripts.tpex_backfill --source-dir "D:\Tpex Data\DailyClose" --start 20070102 --end 20251231 --merge-period year
-python -m scripts.tpex_backfill --source-dir "D:\Tpex Data\DailyClose" --start 20260102 --end 20260621 --merge-period week
+python -m scripts.tpex_backfill --source-dir "D:\Tpex Data\DailyClose" --start 20070102 --end 20251231 --extract-only
+python -m scripts.tpex_backfill --source-dir "D:\Tpex Data\DailyClose" --start 20260102 --end 20260621
 
 ```
 
@@ -111,6 +129,7 @@ python -m scripts.tpex_backfill --source-dir "D:\Tpex Data\DailyClose" --start 2
 - `--output-dir`: 每日 CSV 輸出目錄，預設 `output_tpex`
 - `--zip-dir`: zip 輸出目錄，預設 `releases_tpex`
 - `--merge-period`: 合併週期，可用 `week` 或 `year`
+- `--extract-only`: 只將 raw data 轉成每日 CSV，不做合併打包
 - `--validation-log`: 驗證失敗紀錄，預設 `logs/tpex_validation_failures.log`
 - `--merge-only`: 只合併既有每日 CSV
 
@@ -120,6 +139,35 @@ python -m scripts.tpex_backfill --source-dir "D:\Tpex Data\DailyClose" --start 2
 - 週包: `{zip-dir}/weekly_YYYY_Www.zip`
 - 年包: `{zip-dir}/yearly_YYYY.zip`
 - 驗證失敗紀錄: `{validation-log}`
+
+### TWSE + TPEX 合併打包
+
+`scripts.merge_markets` 只讀取每日 CSV，不讀 raw data。它會讀取 TWSE/TPEX 的 `{output-dir}/YYYYMMDD.csv`，依 `--merge-period` 合併成單一 zip。
+
+建議流程:
+
+```bash
+# 先分別產出 TWSE/TPEX 每日 CSV，不產生市場個別 zip
+python -m scripts.backfill --extract-only --source-dir twse_raw --output-dir output --start 20070101 --end 20071231
+python -m scripts.tpex_backfill --extract-only --source-dir tpex_raw --output-dir output_tpex --start 20070101 --end 20071231
+
+# 再合併兩個市場的每日 CSV，產生 zip
+python -m scripts.merge_markets --twse-dir output --tpex-dir output_tpex --output-dir releases_all --merge-period year --start 20040211 --end 20171231
+```
+
+主要參數:
+
+- `--twse-dir`: TWSE 每日 CSV 目錄，預設 `output`
+- `--tpex-dir`: TPEX 每日 CSV 目錄，預設 `output_tpex`
+- `--output-dir`: 合併後 zip 輸出目錄，預設 `releases_all`
+- `--merge-period`: 輸出合併週期，可用 `week` 或 `year`
+- `--start`: 合併資料起始日期，格式 `YYYYMMDD`
+- `--end`: 合併資料結束日期，格式 `YYYYMMDD`
+
+產生檔案:
+
+- 週包: `{output-dir}/weekly_YYYY_Www.zip`
+- 年包: `{output-dir}/yearly_YYYY.zip`
 
 ## 專案結構
 
@@ -135,5 +183,6 @@ scripts/
   weekly.py              # 每週流程 (GitHub Actions)
   backfill.py            # 歷史回填與批次打包
   tpex_backfill.py       # TPEX 本地回填與批次打包
+  merge_markets.py       # 合併 TWSE/TPEX 每日 CSV 並打包
 README.md
 ```
