@@ -1,10 +1,10 @@
 ﻿# tw-stock-data-release
 
-台灣證券交易所 (TWSE) 每日收盤行情資料，提供可直接下載的 CSV 壓縮檔。
+台灣證券交易所 (TWSE) 與證券櫃檯買賣中心 (TPEX) 每日收盤行情資料，提供可直接下載的 CSV 壓縮檔。
 
 ## 資料內容
 
-- 資料源: TWSE MI_INDEX (每日收盤行情)
+- 資料源: TWSE MI_INDEX + TPEX OTC (每日收盤行情)
 - 範圍: 依股票代號與名稱篩選出的 TWSE/TPEX 標的
 - 欄位: `date`, `code`, `name`, `volume`, `open`, `high`, `low`, `close`
 - 格式: CSV (UTF-8, 含 header)，壓縮為 zip
@@ -177,6 +177,7 @@ python -m scripts.merge_markets --twse-dir output --tpex-dir output_tpex --outpu
 scripts/
   config.py              # 常數設定
   downloader.py          # 下載 TWSE 原始資料
+  tpex_downloader.py     # 下載 TPEX 原始資料
   validator.py           # 資料驗證
   extractor.py           # 萃取 OHLCV
   merger.py              # 合併與壓縮

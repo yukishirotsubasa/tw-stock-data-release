@@ -1,4 +1,4 @@
-﻿name: Weekly TWSE Data Update
+﻿name: Weekly TWSE/TPEX Data Update
 
 on:
   schedule:
@@ -45,11 +45,18 @@ jobs:
           PACKAGE_TAG="${{ steps.weekly.outputs.package_tag }}"
           PERIOD_START="${{ steps.weekly.outputs.period_start }}"
           PERIOD_END="${{ steps.weekly.outputs.period_end }}"
-          NOTES="TWSE 每日收盤行情 (股票+ETF OHLCV)
+          HAS_FAILURES="${{ steps.weekly.outputs.has_failures }}"
+          SUCCESS_COUNT="${{ steps.weekly.outputs.success_count }}"
+          FAILED_COUNT="${{ steps.weekly.outputs.failed_count }}"
+          NOTES="TWSE/TPEX 每日收盤行情 (OHLCV)
           
           - Dataset tag: daily-close-csv
+          - 資料來源: TWSE MI_INDEX + TPEX OTC
           - 資料覆蓋範圍: 20040211 ~ ${PERIOD_END}
           - 本次更新區間: ${PERIOD_START} ~ ${PERIOD_END}
+          - 本次成功 CSV 數: ${SUCCESS_COUNT}
+          - 本次失敗市場日期數: ${FAILED_COUNT}
+          - 本次是否有部分失敗: ${HAS_FAILURES}
           - 格式: CSV (UTF-8, 含 header)
           - 欄位: date, code, name, volume, open, high, low, close"
 

@@ -8,6 +8,9 @@ TWSE_MI_INDEX_URL = (
     "?type=ALL&response=json&date={date}"
 )
 
+# TPEX API
+TPEX_OTC_URL = "https://www.tpex.org.tw/www/zh-tw/afterTrading/otc"
+
 # Request throttling
 REQUEST_DELAY_SEC = 5       # 每次請求間隔
 MAX_RETRIES = 3             # 最大重試次數
@@ -50,4 +53,6 @@ def is_included_security(code: str, name: str) -> bool:
 
 # 目錄
 DATA_DIR = "data"
+TPEX_DATA_DIR = "data_tpex"
 OUTPUT_DIR = "output"
+TPEX_OUTPUT_DIR = "output_tpex"
